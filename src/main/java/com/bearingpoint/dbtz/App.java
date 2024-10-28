@@ -39,8 +39,10 @@ public class App {
         String insert = String.format("insert into %s.%s(id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info) values (?, ?, ?, ?, ?, ?)", schema, table);
         String select = String.format("select id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info from %s.%s", schema, table);
 
-        // Choose a timezone that is different to UTC, your machine's and your DB's default time zone
-        ZoneId zoneId = ZoneId.of("America/New_York");
+        // Choose a timezone that is different to UTC, your machine's and your database's (or its JDBC driver's) default time zone
+        ZoneId zoneId = ZoneId.of("Europe/Vienna");
+//        ZoneId zoneId = ZoneId.of("America/New_York");
+//        ZoneId zoneId = ZoneId.of("UTC");
         ZonedDateTime zdt = ZonedDateTime.of(2013, 9, 13, 9, 0, 0, 0, zoneId);
 
         OffsetDateTime odt = zdt.toOffsetDateTime();
@@ -50,15 +52,22 @@ public class App {
         Timestamp timestamp = Timestamp.from(instant);
         Calendar tzUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
-        System.out.println("Default zoneId: " + ZoneId.systemDefault());
-        System.out.println("Chosen zoneId:  " + zoneId);
+        System.out.println("JVM's default zoneId: " + ZoneId.systemDefault());
+        try (Connection conn = dataSource.getConnection()) {
+            System.out.println("Database/JDBC zoneId: " + readDatabaseTimezone(conn) + " (usually matches JVM's default zoneId)");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Chosen zoneId:        " + zoneId);
+
         System.out.println();
-        System.out.println("ZonedDateTime:  " + zdt);
-        System.out.println("OffsetDateTime: " + odt);
-        System.out.println("LocalDateTime:  " + ldt);
-        System.out.println("Instant:        " + instant + "    <-- this (or its equivalent) is what we want again after writing and reading");
+        System.out.println("Instant:              " + instant + "  <-- this (or its equivalent) is what we want again after writing and reading");
         System.out.println();
-        System.out.println("Timestamp:      " + timestamp);
+        System.out.println("ZonedDateTime:        " + zdt);
+        System.out.println("OffsetDateTime:       " + odt);
+        System.out.println("LocalDateTime:        " + ldt);
+        System.out.println();
+        System.out.println("Timestamp (legacy):   " + timestamp);
         System.out.println();
         System.out.println("------------------------------------------------------------------------------------------------------------------------");
         System.out.println();
@@ -141,6 +150,20 @@ public class App {
         }
     }
 
+    private static String readDatabaseTimezone(Connection conn) throws SQLException {
+
+        // In Postgres, the result depends on the JVM running the JDBC driver which uses that JVM's time zone
+        try (PreparedStatement preparedStatement = conn.prepareStatement("show timezone")) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static void insertDataAsTimestamp(Connection conn, String insert, Timestamp timestamp) throws SQLException {
         System.out.print("Inserting data as Timestamp ................. ");
 
@@ -150,7 +173,7 @@ public class App {
             preparedStatement.setTimestamp(3, timestamp);
             preparedStatement.setTimestamp(4, timestamp);
             preparedStatement.setTimestamp(5, timestamp);
-            preparedStatement.setString(6, "Inserted as Timestamp");
+            preparedStatement.setString(6, "Inserted as java.sql.Timestamp (legacy)");
 
             preparedStatement.executeUpdate();
             System.out.println(DONE);
@@ -169,7 +192,7 @@ public class App {
             preparedStatement.setTimestamp(3, timestamp, tzUTC);
             preparedStatement.setTimestamp(4, timestamp, tzUTC);
             preparedStatement.setTimestamp(5, timestamp, tzUTC);
-            preparedStatement.setString(6, "Inserted as Timestamp with Calendar");
+            preparedStatement.setString(6, "Inserted as java.sql.Timestamp with java.util.Calendar (legacy)");
 
             preparedStatement.executeUpdate();
             System.out.println(DONE);
@@ -188,7 +211,7 @@ public class App {
             preparedStatement.setObject(3, odt);
             preparedStatement.setObject(4, odt);
             preparedStatement.setObject(5, odt);
-            preparedStatement.setString(6, "Inserted as OffsetDateTime");
+            preparedStatement.setString(6, "Inserted as java.time.OffsetDateTime");
 
             preparedStatement.executeUpdate();
             System.out.println(DONE);
@@ -207,7 +230,7 @@ public class App {
             preparedStatement.setObject(3, ldt);
             preparedStatement.setObject(4, ldt);
             preparedStatement.setObject(5, ldt);
-            preparedStatement.setString(6, "Inserted as LocalDateTime");
+            preparedStatement.setString(6, "Inserted as java.time.LocalDateTime");
 
             preparedStatement.executeUpdate();
             System.out.println(DONE);
