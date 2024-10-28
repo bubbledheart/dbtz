@@ -13,10 +13,6 @@ public class Helper {
 
     private final String table;
 
-    public Helper() {
-        this("public", "test_table");
-    }
-
     public Helper(String schema, String table) {
         this.schema = schema;
         this.table = table;
