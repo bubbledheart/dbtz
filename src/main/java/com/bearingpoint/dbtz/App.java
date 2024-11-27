@@ -32,6 +32,8 @@ public class App {
 
     public static void main(String[] args) {
 
+        ZoneId utc = ZoneId.of("UTC");
+
         ZoneId europeWest = ZoneId.of("Europe/London");
         ZoneId europeCentral = ZoneId.of("Europe/Vienna");
         ZoneId europeEast = ZoneId.of("Europe/Sofia");
@@ -51,7 +53,7 @@ public class App {
                 "test_data",
                 DROP_TABLE_AFTER_FINISH);
 
-        work(databaseConfig, usWest, europeCentral);
+        work(databaseConfig, utc, europeCentral);
     }
 
     private static void work(DatabaseConfig databaseConfig, ZoneId jvmZoneId, ZoneId appZoneId) {
