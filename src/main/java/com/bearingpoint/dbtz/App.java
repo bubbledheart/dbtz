@@ -20,6 +20,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
+import static com.bearingpoint.dbtz.DatabaseConfig.DROP_TABLE_AFTER_FINISH;
 import static com.bearingpoint.dbtz.Helper.DONE;
 import static com.bearingpoint.dbtz.Helper.FAILED;
 
@@ -40,23 +41,31 @@ public class App {
         ZoneId usCentralEast = ZoneId.of("America/Chicago");
         ZoneId usEast = ZoneId.of("America/New_York");
 
-        workWithZoneIds(usWest, europeCentral);
+        DatabaseConfig databaseConfig = new DatabaseConfig(
+                "127.0.0.1",
+                5434,
+                "test",
+                "postgres",
+                "postgres",
+                "public",
+                "test_data",
+                DROP_TABLE_AFTER_FINISH);
+
+        work(databaseConfig, usWest, europeCentral);
     }
 
-    private static void workWithZoneIds(ZoneId jvmZoneId, ZoneId appZoneId) {
+    private static void work(DatabaseConfig databaseConfig, ZoneId jvmZoneId, ZoneId appZoneId) {
         // Set the JVM's default time zone
         System.setProperty("user.timezone", jvmZoneId.getId());
 
-        DataSource dataSource = createDatasource("127.0.0.1", 5434, "test", "postgres", "postgres");
+        DataSource dataSource = createDatasource(databaseConfig.host(), databaseConfig.port(), databaseConfig.database(), databaseConfig.username(), databaseConfig.password());
 
-        work(appZoneId, dataSource, "public", "test_data", true);
-    }
-
-    private static void work(ZoneId zoneId, DataSource dataSource, String schema, String table, boolean dropTableAfterFinish) {
+        String schema = databaseConfig.schema();
+        String table = databaseConfig.table();
         String insert = String.format("insert into %s.%s(id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info) values (?, ?, ?, ?, ?, ?)", schema, table);
         String select = String.format("select id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info from %s.%s", schema, table);
 
-        ZonedDateTime zdt = ZonedDateTime.of(2013, 9, 13, 9, 0, 0, 0, zoneId);
+        ZonedDateTime zdt = ZonedDateTime.of(2013, 9, 13, 9, 0, 0, 0, appZoneId);
 
         OffsetDateTime odt = zdt.toOffsetDateTime();
         LocalDateTime ldt = zdt.toLocalDateTime();
@@ -66,13 +75,8 @@ public class App {
         Calendar tzUTC = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 
         System.out.println("JVM's default zoneId: " + ZoneId.systemDefault());
-        try (Connection conn = dataSource.getConnection()) {
-            System.out.println("Database/JDBC zoneId: " + readDatabaseTimezone(conn) + " (usually matches JVM's default zoneId)");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println("Chosen zoneId:        " + zoneId);
-
+        System.out.println("Database/JDBC zoneId: " + readDatabaseTimezone(dataSource) + " (usually matches JVM's default zoneId)");
+        System.out.println("Chosen app zoneId     " + appZoneId);
         System.out.println();
         System.out.println("Instant:              " + instant + "  <-- this (or its equivalent) is what we want again after writing and reading");
         System.out.println();
@@ -88,7 +92,7 @@ public class App {
         final List<Data> data;
 
         try (Connection conn = dataSource.getConnection()) {
-            Helper helper = new Helper(schema, table);
+            Helper helper = new Helper(databaseConfig);
 
             helper.dropTable(conn);
             helper.createTable(conn);
@@ -104,7 +108,7 @@ public class App {
 
             data = readData(conn, select, tzUTC);
 
-            if (dropTableAfterFinish) {
+            if (databaseConfig.dropTableAfterFinish()) {
                 System.out.println();
                 helper.dropTable(conn);
             }
@@ -163,18 +167,21 @@ public class App {
         }
     }
 
-    private static String readDatabaseTimezone(Connection conn) throws SQLException {
-
-        // In Postgres, the result depends on the JVM running the JDBC driver which uses that JVM's time zone
-        try (PreparedStatement preparedStatement = conn.prepareStatement("show timezone")) {
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString(1);
+    private static String readDatabaseTimezone(DataSource dataSource)   {
+        try (Connection conn = dataSource.getConnection()) {
+            // In Postgres, the result depends on the JVM running the JDBC driver which uses that JVM's time zone
+            try (PreparedStatement preparedStatement = conn.prepareStatement("show timezone")) {
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString(1);
+                    } else {
+                        return null;
+                    }
                 }
             }
+        } catch (SQLException e) {
+            return null;
         }
-
-        return null;
     }
 
     private static void insertDataAsTimestamp(Connection conn, String insert, Timestamp timestamp) throws SQLException {
@@ -285,7 +292,7 @@ public class App {
         PGSimpleDataSource dataSource = new PGSimpleDataSource();
 
         dataSource.setLocalSocketAddress(host);
-        dataSource.setPortNumbers(new int[]{port});
+        dataSource.setPortNumbers(new int[] {port});
         dataSource.setDatabaseName(database);
         dataSource.setUser(username);
         dataSource.setPassword(password);

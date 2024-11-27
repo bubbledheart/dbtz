@@ -13,9 +13,9 @@ public class Helper {
 
     private final String table;
 
-    public Helper(String schema, String table) {
-        this.schema = schema;
-        this.table = table;
+    public Helper(DatabaseConfig databaseConfig) {
+        this.schema = databaseConfig.schema();
+        this.table = databaseConfig.table();
     }
 
     public void createTable(Connection connection) throws SQLException {
