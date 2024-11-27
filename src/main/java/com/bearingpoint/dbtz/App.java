@@ -30,19 +30,32 @@ public class App {
     private static final DateTimeFormatter LDT_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.S");
 
     public static void main(String[] args) {
-        DataSource dataSource = createDatasource("127.0.0.1", 5434, "test", "postgres", "postgres");
 
-        work(dataSource, "public", "test_data", true);
+        ZoneId europeWest = ZoneId.of("Europe/London");
+        ZoneId europeCentral = ZoneId.of("Europe/Vienna");
+        ZoneId europeEast = ZoneId.of("Europe/Sofia");
+
+        ZoneId usWest = ZoneId.of("America/Los_Angeles");
+        ZoneId usCentralWest = ZoneId.of("America/Denver");
+        ZoneId usCentralEast = ZoneId.of("America/Chicago");
+        ZoneId usEast = ZoneId.of("America/New_York");
+
+        workWithZoneIds(usWest, europeCentral);
     }
 
-    private static void work(DataSource dataSource, String schema, String table, boolean dropTableAfterFinish) {
+    private static void workWithZoneIds(ZoneId jvmZoneId, ZoneId appZoneId) {
+        // Set the JVM's default time zone
+        System.setProperty("user.timezone", jvmZoneId.getId());
+
+        DataSource dataSource = createDatasource("127.0.0.1", 5434, "test", "postgres", "postgres");
+
+        work(appZoneId, dataSource, "public", "test_data", true);
+    }
+
+    private static void work(ZoneId zoneId, DataSource dataSource, String schema, String table, boolean dropTableAfterFinish) {
         String insert = String.format("insert into %s.%s(id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info) values (?, ?, ?, ?, ?, ?)", schema, table);
         String select = String.format("select id, data_timestamp, data_timestamptz, data_timestamp_with_tz, data_timestamp_without_tz, info from %s.%s", schema, table);
 
-        // Choose a timezone that is different to UTC, your machine's and your database's (or its JDBC driver's) default time zone
-        ZoneId zoneId = ZoneId.of("Europe/Vienna");
-//        ZoneId zoneId = ZoneId.of("America/New_York");
-//        ZoneId zoneId = ZoneId.of("UTC");
         ZonedDateTime zdt = ZonedDateTime.of(2013, 9, 13, 9, 0, 0, 0, zoneId);
 
         OffsetDateTime odt = zdt.toOffsetDateTime();
