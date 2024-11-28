@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.TimeZone;
 
 import static com.bearingpoint.dbtz.DatabaseConfig.DROP_TABLE_AFTER_FINISH;
+import static com.bearingpoint.dbtz.DatabaseConfig.KEEP_TABLE_AFTER_FINISH;
 import static com.bearingpoint.dbtz.Helper.DONE;
 import static com.bearingpoint.dbtz.Helper.FAILED;
 
@@ -45,15 +46,15 @@ public class App {
 
         DatabaseConfig databaseConfig = new DatabaseConfig(
                 "127.0.0.1",
-                5434,
-                "test",
+                5432,
+                "postgres",
                 "postgres",
                 "postgres",
                 "public",
                 "test_data",
                 DROP_TABLE_AFTER_FINISH);
 
-        work(databaseConfig, utc, europeCentral);
+        work(databaseConfig, europeEast, usWest);
     }
 
     private static void work(DatabaseConfig databaseConfig, ZoneId jvmZoneId, ZoneId appZoneId) {
