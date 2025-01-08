@@ -198,7 +198,7 @@ public class App {
         }
     }
 
-    private static String readDatabaseTimezone(DataSource dataSource)   {
+    private static String readDatabaseTimezone(DataSource dataSource) {
         try (Connection conn = dataSource.getConnection()) {
             // In Postgres, the result depends on the JVM running the JDBC driver which uses that JVM's time zone
             try (PreparedStatement preparedStatement = conn.prepareStatement("show timezone")) {
