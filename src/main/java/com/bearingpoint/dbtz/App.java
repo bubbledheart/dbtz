@@ -125,30 +125,54 @@ public class App {
         System.out.println("<id> (Inserted as <Java data type>)");
         System.out.println();
         System.out.println("    <DB data type>              read as <Java data type>        = <Formatted Java data type>  (<equivalent Instant>)   ?");
+        System.out.println();
 
-        data.forEach(x -> {
-            String s = x.id() + " (" + x.info() + ")\n" +
-                    "\n    timestamptz                 read as Timestamp               = " + getString(instant, x.timestampTz()) +
-                    "\n    timestamptz                 read as Timestamp with Calendar = " + getString(instant, x.timestampTzWithCal()) +
-                    "\n    timestamptz                 read as OffsetDateTime          = " + getString(instant, x.odtTz()) +
-                    "\n" +
-                    "\n    timestamp with time zone    read as Timestamp               = " + getString(instant, x.timestampWithTz()) +
-                    "\n    timestamp with time zone    read as timestamp with Calendar = " + getString(instant, x.timestampWithTzWithCal()) +
-                    "\n    timestamp with time zone    read as OffsetDateTime          = " + getString(instant, x.odtWithTz()) +
-                    "\n" +
-                    "\n    timestamp                   read as Timestamp               = " + getString(instant, x.timestamp()) +
-                    "\n    timestamp                   read as Timestamp with Calendar = " + getString(instant, x.timestampWithCal()) +
-                    "\n    timestamp                   read as OffsetDateTime          = " + getString(instant, x.odt()) +
-                    "\n    timestamp                   read as LocalDateTime           = " + getString(instant, x.ldt()) +
-                    "\n" +
-                    "\n    timestamp without time zone read as Timestamp               = " + getString(instant, x.timestampWithoutTz()) +
-                    "\n    timestamp without time zone read as Timestamp with Calendar = " + getString(instant, x.timestampWithoutTzWithCal()) +
-                    "\n    timestamp without time zone read as OffsetDateTime          = " + getString(instant, x.odtWithoutTz()) +
-                    "\n    timestamp without time zone read as LocalDateTime           = " + getString(instant, x.ldtWithoutTz());
+        data.stream()
+                .map(d -> toResult(d, instant))
+                .forEach(System.out::println);
+    }
 
-            System.out.println();
-            System.out.println(s);
-        });
+    private static String toResult(Data data, Instant instant) {
+        return String.format("""
+                        %s (%s)
+                        
+                            timestamptz                 read as Timestamp               = %s
+                            timestamptz                 read as Timestamp with Calendar = %s
+                            timestamptz                 read as OffsetDateTime          = %s
+                        
+                            timestamp with time zone    read as Timestamp               = %s
+                            timestamp with time zone    read as timestamp with Calendar = %s
+                            timestamp with time zone    read as OffsetDateTime          = %s
+                        
+                            timestamp                   read as Timestamp               = %s
+                            timestamp                   read as Timestamp with Calendar = %s
+                            timestamp                   read as OffsetDateTime          = %s
+                            timestamp                   read as LocalDateTime           = %s
+                        
+                            timestamp without time zone read as Timestamp               = %s
+                            timestamp without time zone read as Timestamp with Calendar = %s
+                            timestamp without time zone read as OffsetDateTime          = %s
+                            timestamp without time zone read as LocalDateTime           = %s
+                        """,
+                data.id(), data.info(),
+
+                getString(instant, data.timestampTz()),
+                getString(instant, data.timestampTzWithCal()),
+                getString(instant, data.odtTz()),
+
+                getString(instant, data.timestampWithTz()),
+                getString(instant, data.timestampWithTzWithCal()),
+                getString(instant, data.odtWithTz()),
+
+                getString(instant, data.timestamp()),
+                getString(instant, data.timestampWithCal()),
+                getString(instant, data.odt()),
+                getString(instant, data.ldt()),
+
+                getString(instant, data.timestampWithoutTz()),
+                getString(instant, data.timestampWithoutTzWithCal()),
+                getString(instant, data.odtWithoutTz()),
+                getString(instant, data.ldtWithoutTz()));
     }
 
     private static List<Data> readData(Connection conn, String select, Calendar tzUTC) throws SQLException {
