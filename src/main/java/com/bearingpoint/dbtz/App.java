@@ -54,12 +54,16 @@ public class App {
                 "test_data",
                 DROP_TABLE_AFTER_FINISH);
 
-        work(databaseConfig, europeEast, usWest);
+        setJvmDefaultZoneId(europeEast);
+
+        work(databaseConfig, usWest);
     }
 
-    private static void work(DatabaseConfig databaseConfig, ZoneId jvmZoneId, ZoneId appZoneId) {
-        // Set the JVM's default time zone
+    private static void setJvmDefaultZoneId(ZoneId jvmZoneId) {
         System.setProperty("user.timezone", jvmZoneId.getId());
+    }
+
+    private static void work(DatabaseConfig databaseConfig, ZoneId appZoneId) {
 
         DataSource dataSource = createDatasource(databaseConfig.host(), databaseConfig.port(), databaseConfig.database(), databaseConfig.username(), databaseConfig.password());
 
